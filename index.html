@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Candimate · JSON Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #1c2430;
+    --border:   #21262d;
+    --border2:  #30363d;
+    --accent:   #2dd4bf;
+    --accent2:  #0e7490;
+    --text:     #e6edf3;
+    --muted:    #6e7681;
+    --green:    #3fb950;
+    --yellow:   #d29922;
+    --red:      #f85149;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 24px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+    background: var(--surface);
+  }
+  .logo {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #006874, #2dd4bf);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header-text h1 {
+    font-size: 15px; font-weight: 700; color: var(--text);
+  }
+  .header-text p {
+    font-size: 12px; color: var(--muted); margin-top: 1px;
+  }
+  .badge {
+    margin-left: auto;
+    font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent); background: rgba(45,212,191,.1);
+    border: 1px solid rgba(45,212,191,.25);
+    padding: 4px 12px; border-radius: 100px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    flex: 1; display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .toolbar-group {
+    display: flex; align-items: center; gap: 8px; flex: 1;
+  }
+
+  label.field-label {
+    font-size: 12px; font-weight: 600; color: var(--muted);
+    white-space: nowrap;
+  }
+  input[type="text"], input[type="number"] {
+    background: var(--bg); border: 1px solid var(--border2);
+    color: var(--text); border-radius: 8px;
+    padding: 7px 12px; font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none; transition: border-color .2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+  input.album-id { width: 160px; }
+  input.album-title { width: 180px; }
+  input.start-num { width: 70px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: 8px;
+    font-size: 13px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; border: none;
+    transition: all .18s; white-space: nowrap;
+  }
+  .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .btn-primary {
+    background: var(--accent); color: #001a1d;
+    box-shadow: 0 0 0 0 rgba(45,212,191,0);
+  }
+  .btn-primary:hover {
+    background: #5eead4;
+    box-shadow: 0 0 16px rgba(45,212,191,.3);
+    transform: translateY(-1px);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border2);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: rgba(45,212,191,.06); }
+  .btn-danger {
+    background: transparent; color: var(--muted);
+    border: 1px solid var(--border2);
+  }
+  .btn-danger:hover { border-color: var(--red); color: var(--red); }
+  .btn-copy {
+    background: var(--surface2); color: var(--green);
+    border: 1px solid rgba(63,185,80,.25);
+  }
+  .btn-copy:hover { background: rgba(63,185,80,.1); border-color: var(--green); }
+  .btn-copy.copied { color: var(--accent); border-color: var(--accent); }
+  .btn-dl {
+    background: var(--accent2); color: #fff;
+  }
+  .btn-dl:hover { background: #0e8a9e; box-shadow: 0 0 14px rgba(14,116,144,.35); transform: translateY(-1px); }
+
+  /* ── PANELS ── */
+  .panel {
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .panel-header h2 {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted);
+    flex: 1;
+  }
+  .panel-counter {
+    font-size: 11px; font-weight: 700;
+    color: var(--accent); background: rgba(45,212,191,.1);
+    padding: 3px 10px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  textarea {
+    flex: 1; resize: none; outline: none;
+    background: var(--bg); color: var(--text);
+    border: none; padding: 16px 20px;
+    font-size: 12.5px; line-height: 1.65;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre; overflow: auto;
+    tab-size: 2;
+  }
+  textarea::placeholder { color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 2; }
+  textarea:focus { outline: none; }
+
+  /* Output readonly */
+  #output {
+    color: #79c0ff;
+    caret-color: transparent;
+  }
+  /* JSON syntax colors */
+  .json-key   { color: #79c0ff; }
+  .json-str   { color: #a5d6ff; }
+  .json-num   { color: #ffa657; }
+
+  /* ── STATUS BAR ── */
+  .statusbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 16px;
+    padding: 8px 24px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    background: var(--muted);
+  }
+  .status-dot.ok   { background: var(--green); box-shadow: 0 0 6px rgba(63,185,80,.5); }
+  .status-dot.warn { background: var(--yellow); box-shadow: 0 0 6px rgba(210,153,34,.5); }
+  .status-dot.err  { background: var(--red); }
+  .statusbar .msg { flex: 1; }
+  .statusbar .actions { display: flex; gap: 8px; margin-left: auto; }
+
+  /* ── DRAG OVERLAY ── */
+  .drop-hint {
+    position: absolute; inset: 0;
+    background: rgba(45,212,191,.06);
+    border: 2px dashed var(--accent);
+    border-radius: 4px;
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: var(--accent);
+    pointer-events: none; z-index: 10;
+  }
+  .input-wrap { position: relative; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .input-wrap.dragging .drop-hint { display: flex; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr auto; }
+    .panel { min-height: 200px; }
+    .toolbar { padding: 10px 14px; }
+    .toolbar-group { flex-wrap: wrap; }
+    input.album-id, input.album-title { width: 130px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">📦</div>
+  <div class="header-text">
+    <h1>Candimate JSON Converter</h1>
+    <p>Chuyển đổi danh sách URL Cloudinary → định dạng JSON chuẩn</p>
+  </div>
+  <span class="badge">Tool v2</span>
+</header>
+
+<main>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <label class="field-label">Album ID</label>
+      <input type="text" class="album-id" id="albumId" value="net-dep-hoc-duong" placeholder="net-dep-hoc-duong"/>
+
+      <label class="field-label">Tên album</label>
+      <input type="text" class="album-title" id="albumTitle" value="Nét đẹp học đường" placeholder="Nét đẹp học đường"/>
+
+      <label class="field-label">Ngày</label>
+      <input type="text" id="albumDate" value="09/03/2026" placeholder="09/03/2026" style="width:110px"/>
+
+      <label class="field-label">Bắt đầu từ #</label>
+      <input type="number" class="start-num" id="startNum" value="1" min="1"/>
+    </div>
+
+    <button class="btn btn-primary" onclick="convert()">
+      <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+        <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+      </svg>
+      Convert
+    </button>
+    <button class="btn btn-danger" onclick="clearAll()">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+      </svg>
+      Xóa
+    </button>
+  </div>
+
+  <!-- LEFT: INPUT -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>📥 Danh sách URL đầu vào</h2>
+      <span class="panel-counter" id="inCount">0 URLs</span>
+    </div>
+    <div class="input-wrap" id="inputWrap">
+      <div class="drop-hint">📂 Thả file .txt vào đây</div>
+      <textarea id="input" placeholder="Dán danh sách URL Cloudinary vào đây, mỗi link một dòng:&#10;&#10;https://res.cloudinary.com/dlrax6e5x/image/upload/v1773758975/abc123.jpg&#10;https://res.cloudinary.com/dlrax6e5x/image/upload/v1773758976/xyz456.jpg&#10;...&#10;&#10;💡 Hỗ trợ kéo thả file .txt"></textarea>
+    </div>
+  </div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>📤 JSON Output</h2>
+      <span class="panel-counter" id="outCount">0 ảnh</span>
+    </div>
+    <div class="input-wrap">
+      <textarea id="output" readonly placeholder="JSON sẽ hiển thị ở đây sau khi nhấn Convert..."></textarea>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="msg" id="statusMsg">Sẵn sàng — dán URL vào ô bên trái và nhấn Convert</span>
+    <div class="actions">
+      <button class="btn btn-copy" id="copyBtn" onclick="copyOutput()" style="display:none">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+        Sao chép JSON
+      </button>
+      <button class="btn btn-dl" id="dlBtn" onclick="downloadJSON()" style="display:none">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Tải .json
+      </button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const inputEl   = document.getElementById('input');
+const outputEl  = document.getElementById('output');
+const inCount   = document.getElementById('inCount');
+const outCount  = document.getElementById('outCount');
+const statusDot = document.getElementById('statusDot');
+const statusMsg = document.getElementById('statusMsg');
+const copyBtn   = document.getElementById('copyBtn');
+const dlBtn     = document.getElementById('dlBtn');
+
+let lastJSON = '';
+
+// Live URL count
+inputEl.addEventListener('input', () => {
+  const urls = parseURLs(inputEl.value);
+  inCount.textContent = urls.length + ' URLs';
+});
+
+function parseURLs(text) {
+  return text.split('\n')
+    .map(l => l.trim())
+    .filter(l => l.startsWith('http'));
+}
+
+function buildCandimateJSON(urls) {
+  const albumId    = document.getElementById('albumId').value.trim()    || 'album';
+  const albumTitle = document.getElementById('albumTitle').value.trim() || 'Album';
+  const albumDate  = document.getElementById('albumDate').value.trim()  || '';
+  const startNum   = parseInt(document.getElementById('startNum').value) || 1;
+
+  const photos = urls.map((rawUrl, i) => {
+    // Extract path after /upload/  (strip any existing transforms)
+    // Pattern: ...cloudinary.com/.../image/upload/[transforms/]vVERSION/filename.ext
+    const match = rawUrl.match(/\/image\/upload\/(?:[^/]+\/)*?(v\d+\/[^?#]+)(?:\?.*)?$/);
+    let pathPart;
+    if (match) {
+      pathPart = match[1]; // e.g. v1773758975/abc123.jpg
+    } else {
+      // Fallback: take everything after /upload/
+      const idx = rawUrl.indexOf('/upload/');
+      pathPart = idx >= 0 ? rawUrl.slice(idx + 8) : rawUrl;
+    }
+
+    // Base: up to /image/upload/
+    const baseMatch = rawUrl.match(/^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)/);
+    const base = baseMatch ? baseMatch[1] : 'https://res.cloudinary.com/dlrax6e5x/image/upload/';
+
+    const num  = String(startNum + i).padStart(3, '0');
+    const name = 'Ảnh ' + num;
+
+    return {
+      url:  base + 'f_auto,q_auto,w_800/' + pathPart,
+      full: base + 'f_jpg,q_auto/'        + pathPart,
+      name: name
+    };
+  });
+
+  const album = [{
+    id:     albumId,
+    title:  albumTitle,
+    date:   albumDate,
+    photos: photos
+  }];
+
+  return JSON.stringify(album, null, 2);
+}
+
+function convert() {
+  const urls = parseURLs(inputEl.value);
+
+  if (urls.length === 0) {
+    setStatus('warn', 'Không tìm thấy URL nào — hãy dán danh sách link vào ô bên trái');
+    return;
+  }
+
+  lastJSON = buildCandimateJSON(urls);
+  outputEl.value = lastJSON;
+  outCount.textContent = urls.length + ' ảnh';
+
+  setStatus('ok', `✅ Đã convert ${urls.length} ảnh thành công!`);
+  copyBtn.style.display = '';
+  dlBtn.style.display = '';
+  copyBtn.classList.remove('copied');
+}
+
+function clearAll() {
+  inputEl.value = '';
+  outputEl.value = '';
+  lastJSON = '';
+  inCount.textContent  = '0 URLs';
+  outCount.textContent = '0 ảnh';
+  copyBtn.style.display = 'none';
+  dlBtn.style.display = 'none';
+  setStatus('', 'Đã xóa — sẵn sàng nhập dữ liệu mới');
+}
+
+function copyOutput() {
+  if (!lastJSON) return;
+  navigator.clipboard.writeText(lastJSON).then(() => {
+    copyBtn.classList.add('copied');
+    copyBtn.querySelector('svg + *') || null;
+    const orig = copyBtn.innerHTML;
+    copyBtn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Đã sao chép!`;
+    setTimeout(() => {
+      copyBtn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Sao chép JSON`;
+      copyBtn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function downloadJSON() {
+  if (!lastJSON) return;
+  const albumId = document.getElementById('albumId').value.trim() || 'album';
+  const blob = new Blob([lastJSON], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = albumId + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus('ok', `📥 Đã tải file ${albumId}.json`);
+}
+
+function setStatus(type, msg) {
+  statusDot.className = 'status-dot' + (type ? ' ' + type : '');
+  statusMsg.textContent = msg;
+}
+
+// Drag & drop .txt file into input area
+const wrap = document.getElementById('inputWrap');
+wrap.addEventListener('dragover', e => { e.preventDefault(); wrap.classList.add('dragging'); });
+wrap.addEventListener('dragleave', () => wrap.classList.remove('dragging'));
+wrap.addEventListener('drop', e => {
+  e.preventDefault(); wrap.classList.remove('dragging');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    inputEl.value = ev.target.result;
+    const urls = parseURLs(inputEl.value);
+    inCount.textContent = urls.length + ' URLs';
+    setStatus('ok', `📂 Đã tải file "${file.name}" — ${urls.length} URLs`);
+  };
+  reader.readAsText(file);
+});
+
+// Keyboard shortcut: Ctrl+Enter = Convert
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') convert();
+});
+</script>
+</body>
+</html>
